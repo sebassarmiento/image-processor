@@ -204,9 +204,9 @@ Image overlay(Image* topLayer, Image* bottomLayer){
         float g = ((float)bottom.green/255);
         float r = ((float)bottom.red/255);
         //  Overlay method -> B is the bottomLayer pixel. If B is less than or equal to 0.5 (from 0 - 1) then C = 2*A*B, else C = 1 - 2*(1-A)*(1-B)
-        char blue = (b <= 0.5f ? (char)((2*((float)top.blue/255)*(b))*255) : (char)((1 - (2*(1 - ((float)top.blue/255)) * (1 - b)))*255));
-        char green = (g <= 0.5f ? (char)((2*((float)top.green/255)*(g))*255) : (char)((1 - (2*(1 - ((float)top.green/255)) * (1 - g)))*255));
-        char red = (r <= 0.5f ? (char)((2*((float)top.red/255)*(r))*255) : (char)((1 - (2*(1 - ((float)top.red/255)) * (1 - r)))*255));
+        char blue = (b <= 0.5f ? (char)(((2*((float)top.blue/255)*(b))*255)+(float)0.5) : (char)(((1 - (2*(1 - ((float)top.blue/255)) * (1 - b)))*255)+(float)0.5) );
+        char green = (g <= 0.5f ? (char)(((2*((float)top.green/255)*(g))*255)+(float)0.5) : (char)(((1 - (2*(1 - ((float)top.green/255)) * (1 - g)))*255)+(float)0.5));
+        char red = (r <= 0.5f ? (char)(((2*((float)top.red/255)*(r))*255)+(float)0.5) : (char)(((1 - (2*(1 - ((float)top.red/255)) * (1 - r)))*255)+(float)0.5) );
 
         Pixel pxl(blue, green, red);
         imageData.push_back(pxl);
@@ -268,7 +268,7 @@ Image combineLayers(Image* blueLayer, Image* greenLayer, Image* redLayer){
 
 Image rotate(Image* image){
     std::vector<Pixel> imageData;
-    for(int i = (int)image->imageData.size(); i >= 0; i--){
+    for(int i = (int)image->imageData.size()-1; i >= 0; i--){
         char blue = (char)image->imageData[i].blue;
         char green = (char)image->imageData[i].green;
         char red = (char)image->imageData[i].red;
@@ -334,119 +334,158 @@ Image combineAll(Image* imageOne, Image* imageTwo, Image* imageThree, Image* ima
 
 }
 
+bool test(Image* myImage, Image* expectedImage){
+    if(myImage->imageData.size() != expectedImage->imageData.size()){
+        std::cout << "\nError: size of pixel vector is " << myImage->imageData.size() << " when it should be " << expectedImage->imageData.size();
+    }
+
+    if(myImage->header.width != expectedImage->header.width) return false;
+    if(myImage->header.height != expectedImage->header.height) return false;
+    if(myImage->header.colorMapDepth != expectedImage->header.colorMapDepth) return false;
+    if(myImage->header.colorMapLength != expectedImage->header.colorMapLength) return false;
+    if(myImage->header.colorMapOrigin != expectedImage->header.colorMapOrigin) return false;
+    if(myImage->header.colorMapType != expectedImage->header.colorMapType) return false;
+    if(myImage->header.dataTypeCode != expectedImage->header.dataTypeCode) return false;
+    if(myImage->header.idLength != expectedImage->header.idLength) return false;
+    if(myImage->header.imageDescriptor != expectedImage->header.imageDescriptor) return false;
+    if(myImage->header.bitsPerPixel != expectedImage->header.bitsPerPixel) return false;
+    if(myImage->header.yOrigin != expectedImage->header.yOrigin) return false;
+    if(myImage->header.xOrigin != expectedImage->header.xOrigin) return false;
+
+    std::cout << "\nNo issues with header";
+
+    for(int i = 0; i < myImage->imageData.size(); i++){
+        if(myImage->imageData[i].blue != expectedImage->imageData[i].blue) {
+            std::cout << "\nError at blue index " << i;
+            std::cout << "myImage ";
+            return false;
+        };
+        if(myImage->imageData[i].green != expectedImage->imageData[i].green) {
+            std::cout << "\nError at green index " << i;
+            std::cout << ": myImage green is " << (int)myImage->imageData[i].green << " when it should be " << (int)expectedImage->imageData[i].green;
+            //return false;
+        };
+        if(myImage->imageData[i].red != expectedImage->imageData[i].red) { std::cout << "\nError at red index " << i; return false; };
+    }
+    return true;
+}
+
 int main() {
 
-    // PART 1 - Multiply -> to combine layer1.tga (top layer) and pattern1.tga (bottom layer)
-    // C = top * bottom  - layers
+    std::vector<bool> myTests;
 
-    Image layer1 = readFile("layer1.tga");
-    Image pattern1 = readFile("pattern1.tga");
+    // PART 1 - Multiply -> to combine layer1.tga (top layer) and pattern1.tga (bottom layer)
+
+    Image layer1 = readFile("input/layer1.tga");
+    Image pattern1 = readFile("input/pattern1.tga");
 
     Image result = multiply(&layer1, &pattern1);
-    createFile(&result, "part1.tga");
+    createFile(&result, "output/part1.tga");
+
+    Image expectedImage = readFile("examples/EXAMPLE_part1.tga");
+    myTests.push_back(test(&result, &expectedImage));
+
     std::cout<<"\n///// PART 1 DONE /////\n";
 
     //PART 2 - Subtract top layer from bottom layer
 
-    Image layer2 = readFile("layer2.tga");
-    Image car = readFile("car.tga");
+    Image layer2 = readFile("input/layer2.tga");
+    Image car = readFile("input/car.tga");
 
     result = subtract(&layer2, &car);
-    createFile(&result, "part2.tga");
+    createFile(&result, "output/part2.tga");
+
+    expectedImage = readFile("examples/EXAMPLE_part2.tga");
+    myTests.push_back(test(&result, &expectedImage));
     std::cout<<"\n///// PART 2 DONE /////\n";
 
     // PART 3 -
-    Image pattern2 = readFile("pattern2.tga");
+    Image pattern2 = readFile("input/pattern2.tga");
     Image combined = multiply(&layer1, &pattern2);
-    Image text = readFile("text.tga");
+    Image text = readFile("input/text.tga");
     result = screen(&text, &combined);
-    createFile(&result, "part3.tga");
+    createFile(&result, "output/part3.tga");
+
+    expectedImage = readFile("examples/EXAMPLE_part3.tga");
+    myTests.push_back(test(&result, &expectedImage));
     std::cout << "\n///// PART 3 IS DONE //////\n";
 
     // PART 4
-    Image circles = readFile("circles.tga");
+    Image circles = readFile("input/circles.tga");
     combined = multiply(&layer2, &circles);
     result = subtract(&pattern2, &combined);
-    createFile(&result, "part4.tga");
+    createFile(&result, "output/part4.tga");
+
+    expectedImage = readFile("examples/EXAMPLE_part4.tga");
+    myTests.push_back(test(&result, &expectedImage));
     std::cout << "\n///// PART 4 DONE /////";
 
     // PART 5
     result = overlay(&layer1, &pattern1);
-    createFile(&result, "part5.tga");
+    createFile(&result, "output/part5.tga");
+
+    expectedImage = readFile("examples/EXAMPLE_part5.tga");
+    myTests.push_back(test(&result, &expectedImage));
     std::cout << "\n///// PART 5 DONE //////\n";
 
     // PART 6
     result = addColor(&car);
-    createFile(&result, "part6.tga");
+    createFile(&result, "output/part6.tga");
+
+    expectedImage = readFile("examples/EXAMPLE_part6.tga");
+    myTests.push_back(test(&result, &expectedImage));
     std::cout << "\n//// PART 6 DONE ////";
 
     // PART 7
     result = scale(&car);
-    createFile(&result, "part7.tga");
+    createFile(&result, "output/part7.tga");
+
+    expectedImage = readFile("examples/EXAMPLE_part7.tga");
+    myTests.push_back(test(&result, &expectedImage));
     std::cout << "\n//// PART 7 DONE ////";
 
     // PART 8
     result = oneChannel(&car, "red");
-    createFile(&result, "part8_r.tga");
+    createFile(&result, "output/part8_r.tga");
     result = oneChannel(&car, "blue");
-    createFile(&result, "part8_b.tga");
+    createFile(&result, "output/part8_b.tga");
     result = oneChannel(&car, "green");
-    createFile(&result, "part8_g.tga");
+    createFile(&result, "output/part8_g.tga");
+
+    expectedImage = readFile("examples/EXAMPLE_part8_g.tga");
+    myTests.push_back(test(&result, &expectedImage));
     std::cout << "\n//// PART 8 DONE ////";
 
     // PART 9
-    Image blueLayer = readFile("layer_blue.tga");
-    Image greenLayer = readFile("layer_green.tga");
-    Image redLayer = readFile("layer_red.tga");
+    Image blueLayer = readFile("input/layer_blue.tga");
+    Image greenLayer = readFile("input/layer_green.tga");
+    Image redLayer = readFile("input/layer_red.tga");
 
     result = combineLayers(&blueLayer, &greenLayer, &redLayer);
-    createFile(&result, "part9.tga");
+    createFile(&result, "output/part9.tga");
+
+    expectedImage = readFile("examples/EXAMPLE_part9.tga");
+    myTests.push_back(test(&result, &expectedImage));
     std::cout << "\n//// PART 9 DONE ////";
 
     // PART 10
-    Image text2 = readFile("text2.tga");
+    Image text2 = readFile("input/text2.tga");
     result = rotate(&text2);
-    createFile(&result, "part10.tga");
+    createFile(&result, "output/part10.tga");
+
+    expectedImage = readFile("examples/EXAMPLE_part10.tga");
+    myTests.push_back(test(&result, &expectedImage));
     std::cout << "\n//// PART 10 DONE ////";
 
     // EXTRA CREDIT - combine car.tga - circles.tga - pattern1.tga - text.tga
     result = combineAll(&text, &pattern1, &car, &circles);
-    createFile(&result, "extracredit.tga");
+    createFile(&result, "output/extracredit.tga");
     std::cout << "\n//// EXTRA CREDIT DONE ////";
 
+    std::cout << "\nTesting...\n";
+    for(int i = 0; i < myTests.size(); i++){
+        std::cout << "\nTest #" << i+1 << ": " << (myTests[i] ? "PASSED!" : "FAILED!");
+    }
 
     return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-///// OUTPUT VALUES OF HEADER
-//std::cout << "\nID Length: " << (int)headerObject.idLength;
-//std::cout << "\nColor Map Type: " << (int)headerObject.colorMapType;
-//std::cout << "\nData Type Code: " << (int)headerObject.dataTypeCode;
-//std::cout << "\nColor Map Origin: " << headerObject.colorMapOrigin;
-//std::cout << "\nColor Map Length: " << headerObject.colorMapLength;
-//std::cout << "\nColor Map Depth: " << (int)headerObject.colorMapDepth;
-//std::cout << "\nX Origin: " << headerObject.xOrigin;
-//std::cout << "\nY Origin: " << headerObject.yOrigin;
-//
-//std::cout << "\nImage Width: " << headerObject.width;
-//std::cout << "\nImage Height: " << headerObject.height;
-//
-//std::cout << "\nBits per Pixel: " << (int)headerObject.bitsPerPixel;
-//std::cout << "\nImage Descriptor: " << (int)headerObject.imageDescriptor;
-//
-//std::cout << "\nSize of header is " << sizeof(Header) << " bytes";
